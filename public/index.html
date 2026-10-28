@@ -380,6 +380,96 @@
     .toast.success { border-color: rgba(200,255,0,.25); }
     .toast.error   { border-color: rgba(255,77,79,.25); }
 
+    /* ── Settings modal ──────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.6);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000; padding: 20px;
+      animation: fadeOverlay .18s ease;
+    }
+    @keyframes fadeOverlay { from { opacity: 0; } to { opacity: 1; } }
+    .modal-overlay.closing { animation: fadeOverlay .15s ease reverse forwards; }
+
+    .modal {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; width: 100%; max-width: 460px;
+      display: flex; flex-direction: column; overflow: hidden;
+      animation: modalIn .2s ease;
+    }
+    @keyframes modalIn { from { opacity:0; transform: translateY(10px) scale(.98); } to { opacity:1; transform:none; } }
+
+    .modal-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; border-bottom: 1px solid var(--border);
+    }
+    .modal-head h2 { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+    .modal-close {
+      background: none; border: none; color: var(--muted); cursor: pointer;
+      padding: 4px; border-radius: 6px; display: flex; align-items: center;
+      transition: color var(--ease), background var(--ease);
+    }
+    .modal-close:hover { color: var(--text); background: var(--border); }
+
+    .modal-body { padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+
+    .settings-section-label {
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: .6px; color: var(--muted); margin-bottom: 10px;
+    }
+
+    .mode-toggle {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    }
+    .mode-btn {
+      display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+      padding: 12px 14px; border-radius: 10px; cursor: pointer;
+      border: 1.5px solid var(--border); background: var(--surface2);
+      transition: border-color var(--ease), background var(--ease);
+      text-align: left;
+    }
+    .mode-btn:hover { border-color: #38383f; }
+    .mode-btn.active { border-color: var(--accent); background: rgba(200,255,0,.04); }
+    .mode-btn .mb-title {
+      font-size: 13px; font-weight: 600; color: var(--text);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .mode-btn .mb-desc { font-size: 11px; color: var(--muted); line-height: 1.45; }
+    .mode-btn .mb-badge {
+      font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 8px;
+      background: rgba(200,255,0,.15); color: var(--accent); border: 1px solid rgba(200,255,0,.2);
+    }
+
+    .api-key-field { display: flex; flex-direction: column; gap: 8px; }
+    .api-key-field label { font-size: 12px; color: var(--muted); }
+    .api-key-input-wrap { display: flex; gap: 8px; }
+    .api-key-input {
+      flex: 1; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 12px; font-size: 13px;
+      font-family: 'Courier New', monospace; color: var(--text); outline: none;
+      transition: border-color var(--ease);
+    }
+    .api-key-input:focus { border-color: var(--accent); }
+    .api-key-input::placeholder { color: var(--muted); font-family: inherit; }
+
+    .key-status-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 13px; border-radius: 8px;
+      background: var(--surface2); border: 1px solid var(--border);
+      font-size: 12px;
+    }
+    .key-status-row .ks-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .ks-dot.ok  { background: var(--accent); }
+    .ks-dot.err { background: var(--red); }
+    .ks-dot.warn { background: #f59e0b; }
+
+    /* Gear button */
+    .icon-btn {
+      background: none; border: 1px solid var(--border); color: var(--muted);
+      border-radius: 8px; padding: 6px 8px; cursor: pointer; display: flex; align-items: center;
+      transition: color var(--ease), border-color var(--ease), background var(--ease);
+    }
+    .icon-btn:hover { color: var(--text); border-color: #38383f; background: var(--surface2); }
+
     ::-webkit-scrollbar { width: 5px; }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
   </style>
@@ -403,6 +493,12 @@
       <div class="dot" id="statusDot"></div>
       <span id="statusText">Checking…</span>
     </div>
+    <button class="icon-btn" id="settingsBtn" title="Settings" onclick="openSettings()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </button>
   </div>
 </header>
 
@@ -622,6 +718,77 @@
 <div id="toasts"></div>
 <audio id="audioEl" style="display:none;"></audio>
 
+<!-- ── Settings Modal ──────────────────────────────────────────── -->
+<div id="settingsOverlay" style="display:none;" onclick="overlayClick(event)">
+  <div class="modal" id="settingsModal">
+    <div class="modal-head">
+      <h2>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+        Settings
+      </h2>
+      <button class="modal-close" onclick="closeSettings()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="modal-body">
+
+      <!-- Mode selection -->
+      <div>
+        <div class="settings-section-label">API Key Mode</div>
+        <div class="mode-toggle">
+          <button class="mode-btn active" id="modeAutoBtn" onclick="setKeyMode('auto')">
+            <span class="mb-title">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              Automatic
+            </span>
+            <span class="mb-desc">Uses the API key in the server's <code style="font-size:10px;background:var(--surface);padding:1px 4px;border-radius:3px;">.env</code> file. For self-hosted deployments.</span>
+          </button>
+          <button class="mode-btn" id="modeManualBtn" onclick="setKeyMode('manual')">
+            <span class="mb-title">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              Manual
+              <span class="mb-badge">Vercel users</span>
+            </span>
+            <span class="mb-desc">Paste your own OpenRouter API key. Cleared automatically on page refresh.</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Manual key input (shown only in manual mode) -->
+      <div id="manualKeySection" style="display:none;">
+        <div class="settings-section-label">Your OpenRouter API Key</div>
+        <div class="api-key-field">
+          <label>Get your key at <a href="https://openrouter.ai/settings/keys" target="_blank" style="color:var(--accent);text-decoration:none;">openrouter.ai/settings/keys</a></label>
+          <div class="api-key-input-wrap">
+            <input type="password" id="manualKeyInput" class="api-key-input"
+              placeholder="sk-or-v1-…"
+              autocomplete="off" spellcheck="false" />
+            <button class="btn btn-primary" id="saveKeyBtn" onclick="saveManualKey()" style="white-space:nowrap;padding:10px 16px;">
+              Save
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Current key status -->
+      <div>
+        <div class="settings-section-label">Status</div>
+        <div class="key-status-row" id="keyStatusRow">
+          <div class="ks-dot" id="ksStatusDot"></div>
+          <span id="ksStatusText">—</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 <script>
 // ═══════════════════════════════════════════════════════════════════
 // CONSTANTS & CONFIG
@@ -747,21 +914,110 @@ let chunkBlobs   = [];     // { blob, ext } per chunk, filled as generated
 let chunkAudios  = [];     // HTMLAudioElement per chunk
 let activeChunkIdx = -1;   // which chunk is currently playing
 
+// ── API key session state ─────────────────────────────────────────
+// 'auto'   = use .env key on server (default)
+// 'manual' = user-supplied key, stored only in memory (cleared on refresh)
+let keyMode      = 'auto';
+let sessionApiKey = null;  // null until user saves a manual key
+
 const $ = id => document.getElementById(id);
 
 // ═══════════════════════════════════════════════════════════════════
 // HEALTH CHECK
 // ═══════════════════════════════════════════════════════════════════
-(async () => {
+async function checkHealth() {
   try {
-    const d = await (await fetch('/api/health')).json();
-    $('statusDot').className   = d.ok && d.keyConfigured ? 'dot ok'  : 'dot err';
-    $('statusText').textContent = d.ok && d.keyConfigured ? 'API key configured' : 'Key missing in .env';
+    const headers = {};
+    if (sessionApiKey) headers['X-Client-Api-Key'] = sessionApiKey;
+    const d = await (await fetch('/api/health', { headers })).json();
+    $('statusDot').className    = d.ok && d.keyConfigured ? 'dot ok'  : 'dot err';
+    $('statusText').textContent = d.ok && d.keyConfigured ? 'API key configured' : 'Key missing — open Settings';
   } catch {
-    $('statusDot').className   = 'dot err';
+    $('statusDot').className    = 'dot err';
     $('statusText').textContent = 'Server unreachable';
   }
-})();
+}
+checkHealth();
+
+// ═══════════════════════════════════════════════════════════════════
+// SETTINGS MODAL
+// ═══════════════════════════════════════════════════════════════════
+function openSettings() {
+  const overlay = $('settingsOverlay');
+  overlay.className = 'modal-overlay';
+  overlay.style.display = 'flex';
+  refreshKeyStatus();
+}
+
+function closeSettings() {
+  const overlay = $('settingsOverlay');
+  overlay.classList.add('closing');
+  setTimeout(() => {
+    overlay.style.display = 'none';
+    overlay.classList.remove('closing');
+  }, 150);
+}
+
+function overlayClick(e) {
+  // Close when clicking the backdrop (not the modal itself)
+  if (e.target === $('settingsOverlay')) closeSettings();
+}
+
+function setKeyMode(mode) {
+  keyMode = mode;
+  $('modeAutoBtn').classList.toggle('active',   mode === 'auto');
+  $('modeManualBtn').classList.toggle('active', mode === 'manual');
+  $('manualKeySection').style.display = mode === 'manual' ? '' : 'none';
+
+  // If switching back to auto, clear session key
+  if (mode === 'auto') {
+    sessionApiKey = null;
+    $('manualKeyInput').value = '';
+    refreshKeyStatus();
+    checkHealth();
+  } else {
+    // Pre-fill if a key was already saved this session
+    if (sessionApiKey) $('manualKeyInput').value = sessionApiKey;
+    refreshKeyStatus();
+  }
+}
+
+function saveManualKey() {
+  const raw = $('manualKeyInput').value.trim();
+  if (!raw) { toast('Please paste your API key first', 'error'); return; }
+  if (!raw.startsWith('sk-or-')) {
+    toast('That doesn\'t look like an OpenRouter key (should start with sk-or-)', 'error');
+    return;
+  }
+  sessionApiKey = raw;
+  refreshKeyStatus();
+  checkHealth();
+  toast('API key saved for this session', 'success');
+  // Close after short delay so user sees the success toast
+  setTimeout(closeSettings, 800);
+}
+
+function refreshKeyStatus() {
+  const dot  = $('ksStatusDot');
+  const text = $('ksStatusText');
+  if (keyMode === 'manual') {
+    if (sessionApiKey) {
+      dot.className  = 'ks-dot ok';
+      text.textContent = 'Manual key active — ' + sessionApiKey.slice(0, 10) + '…' + sessionApiKey.slice(-4);
+    } else {
+      dot.className  = 'ks-dot warn';
+      text.textContent = 'No manual key saved yet — paste your key above';
+    }
+  } else {
+    dot.className  = 'ks-dot ok';
+    text.textContent = 'Automatic — using API key from server .env';
+  }
+}
+
+// Close modal on Escape key
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && $('settingsOverlay').style.display !== 'none') closeSettings();
+});
 
 // ═══════════════════════════════════════════════════════════════════
 // MODE SWITCH
@@ -814,7 +1070,9 @@ $('removeFile').addEventListener('click', clearCloneFile);
 function setCloneFile(file) {
   const r = new FileReader();
   r.onload = e => {
-    cloneFileB64 = e.target.result.split(',')[1];
+    // Keep the full data URI (e.g. "data:audio/wav;base64,...") —
+    // the API expects this exact format in input_references[].input_audio.data
+    cloneFileB64 = e.target.result;
     $('fileName').textContent = file.name;
     $('fileSize').textContent = fmtBytes(file.size);
     dropZone.style.display = 'none';
@@ -966,9 +1224,13 @@ async function generateChunked(chunks, basePayload) {
 
 // ─── Core API call ─────────────────────────────────────────────────
 async function callTTS(payload) {
+  const headers = { 'Content-Type': 'application/json' };
+  // Include manual key if user configured one in Settings
+  if (sessionApiKey) headers['X-Client-Api-Key'] = sessionApiKey;
+
   const res = await fetch('/api/tts', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(payload)
   });
 

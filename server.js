@@ -17,9 +17,10 @@ app.use(express.static(join(__dirname, 'public')));
 //   cloneAudio       string  – base64 audio data URI for voice cloning (required for clone mode)
 //   cloneTranscript  string  – optional transcript of the clone clip
 app.post('/api/tts', async (req, res) => {
-  const apiKey = process.env.OPENROUTER_API_KEY?.trim();
+  // Manual key (from frontend settings) takes priority over the .env key
+  const apiKey = (req.headers['x-client-api-key'] || process.env.OPENROUTER_API_KEY || '').trim();
   if (!apiKey) {
-    return res.status(500).json({ error: 'OPENROUTER_API_KEY is not set in .env' });
+    return res.status(500).json({ error: 'No API key configured. Set one in Settings or add it to .env' });
   }
 
   const { text, voice, cloneAudio, cloneTranscript } = req.body;
@@ -99,8 +100,10 @@ app.post('/api/tts', async (req, res) => {
 });
 
 // ── GET /api/health ────────────────────────────────────────────────
-app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, keyConfigured: !!process.env.OPENROUTER_API_KEY?.trim() });
+app.get('/api/health', (req, res) => {
+  const clientKey = (req.headers['x-client-api-key'] || '').trim();
+  const envKey    = (process.env.OPENROUTER_API_KEY || '').trim();
+  res.json({ ok: true, keyConfigured: !!(clientKey || envKey) });
 });
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
