@@ -1,0 +1,1481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HeyGen Voice Studio</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0d0d0f;
+      --surface:  #141417;
+      --surface2: #1a1a1f;
+      --border:   #2a2a32;
+      --accent:   #c8ff00;
+      --accent-d: #9abb00;
+      --text:     #e8e8ec;
+      --muted:    #6b6b7a;
+      --red:      #ff4d4f;
+      --purple:   #a78bfa;
+      --radius:   12px;
+      --ease:     0.18s ease;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ──────────────────────────────────────────────── */
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 15px 28px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 600; }
+    .logo-mark {
+      width: 28px; height: 28px; background: var(--accent); border-radius: 7px;
+      display: flex; align-items: center; justify-content: center; color: #000;
+    }
+    .badge {
+      font-size: 11px; font-weight: 500;
+      background: rgba(200,255,0,.1); color: var(--accent);
+      border: 1px solid rgba(200,255,0,.2); border-radius: 20px; padding: 3px 10px;
+    }
+    .status-pill { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); transition: background var(--ease); }
+    .dot.ok  { background: var(--accent); }
+    .dot.err { background: var(--red); }
+
+    /* ── Main grid ───────────────────────────────────────────── */
+    main {
+      flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+      max-width: 1200px; width: 100%; margin: 0 auto; padding: 24px 28px; align-items: start;
+    }
+    @media (max-width: 780px) { main { grid-template-columns: 1fr; padding: 14px; } }
+
+    /* ── Panel ───────────────────────────────────────────────── */
+    .panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); display: flex; flex-direction: column; overflow: hidden;
+    }
+    .panel-head {
+      padding: 13px 18px; border-bottom: 1px solid var(--border);
+      font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .7px;
+      color: var(--muted); display: flex; align-items: center; gap: 8px;
+    }
+
+    /* ── Tabs ────────────────────────────────────────────────── */
+    .tabs { display: flex; border-bottom: 1px solid var(--border); padding: 0 18px; }
+    .tab {
+      padding: 11px 14px; font-size: 12px; font-weight: 500; color: var(--muted);
+      cursor: pointer; border-bottom: 2px solid transparent;
+      transition: color var(--ease), border-color var(--ease);
+      display: flex; align-items: center; gap: 6px;
+      background: none; border-top: none; border-left: none; border-right: none; font-family: inherit;
+    }
+    .tab.active { color: var(--text); border-bottom-color: var(--accent); }
+    .tab:hover:not(.active) { color: #aaa; }
+
+    /* ── Char row ────────────────────────────────────────────── */
+    .char-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 7px 18px; border-bottom: 1px solid var(--border);
+      font-size: 11px; color: var(--muted);
+    }
+    .char-row .chunks-hint { color: var(--accent); font-weight: 500; }
+
+    /* ── Textarea ────────────────────────────────────────────── */
+    textarea {
+      width: 100%; resize: none; background: transparent;
+      border: none; outline: none; color: var(--text);
+      font-size: 14px; line-height: 1.75; padding: 16px 18px; font-family: inherit;
+    }
+    textarea::placeholder { color: var(--muted); }
+    #prompt { min-height: 220px; }
+
+    /* ── Controls ────────────────────────────────────────────── */
+    .controls-row {
+      padding: 14px 18px; border-top: 1px solid var(--border);
+      display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: end;
+    }
+    .ctrl label {
+      display: block; font-size: 11px; font-weight: 500;
+      text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin-bottom: 6px;
+    }
+    .sel-wrap { position: relative; }
+    .sel-wrap select {
+      width: 100%; appearance: none; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 8px; color: var(--text);
+      font-size: 13px; font-family: inherit; padding: 9px 30px 9px 12px;
+      cursor: pointer; outline: none; transition: border-color var(--ease);
+    }
+    .sel-wrap select:focus { border-color: var(--accent); }
+    .sel-wrap::after {
+      content: ''; position: absolute; right: 11px; top: 50%; transform: translateY(-50%);
+      border: 4px solid transparent; border-top-color: var(--muted); pointer-events: none;
+    }
+
+    /* ── Clone section ───────────────────────────────────────── */
+    .clone-section { padding: 16px 18px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 14px; }
+    .clone-label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+    .drop-zone {
+      border: 1.5px dashed var(--border); border-radius: 9px; padding: 18px;
+      text-align: center; cursor: pointer; position: relative;
+      transition: border-color var(--ease), background var(--ease);
+    }
+    .drop-zone:hover, .drop-zone.drag-over { border-color: var(--accent); background: rgba(200,255,0,.04); }
+    .drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+    .drop-zone .dz-icon { color: var(--muted); margin-bottom: 8px; }
+    .drop-zone p { font-size: 13px; color: var(--muted); }
+    .drop-zone small { font-size: 11px; color: #44444f; }
+    .file-chip {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px;
+    }
+    .file-chip .fc-icon { color: var(--accent); flex-shrink: 0; }
+    .file-chip .fc-info { flex: 1; overflow: hidden; }
+    .file-chip .fc-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .file-chip .fc-size { font-size: 11px; color: var(--muted); }
+    .file-chip .fc-rm {
+      background: none; border: none; color: var(--muted); cursor: pointer;
+      padding: 4px; border-radius: 5px; display: flex; align-items: center;
+      transition: color var(--ease), background var(--ease);
+    }
+    .file-chip .fc-rm:hover { color: var(--red); background: rgba(255,77,79,.1); }
+    .clone-transcript {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 12px; font-size: 13px;
+      font-family: inherit; color: var(--text); outline: none; resize: none;
+    }
+    .clone-transcript:focus { border-color: var(--accent); }
+
+    /* ── Actions ─────────────────────────────────────────────── */
+    .actions {
+      padding: 12px 18px; border-top: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .hint { font-size: 11px; color: var(--muted); margin-left: auto; }
+
+    /* ── Buttons ─────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      font-size: 13px; font-weight: 600; font-family: inherit;
+      border: none; border-radius: 8px; cursor: pointer; padding: 10px 18px;
+      transition: opacity var(--ease), background var(--ease), transform .1s; white-space: nowrap;
+    }
+    .btn:active:not(:disabled) { transform: scale(.97); }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-primary { background: var(--accent); color: #000; }
+    .btn-primary:hover:not(:disabled) { background: #d4ff1a; }
+    .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+    .btn-ghost:hover:not(:disabled) { color: var(--text); border-color: #44444f; }
+    .btn-purple { background: rgba(167,139,250,.15); color: var(--purple); border: 1px solid rgba(167,139,250,.25); }
+    .btn-purple:hover:not(:disabled) { background: rgba(167,139,250,.25); }
+    .btn-sq { padding: 9px; border-radius: 8px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner { width: 14px; height: 14px; border: 2px solid rgba(0,0,0,.25); border-top-color: #000; border-radius: 50%; animation: spin .6s linear infinite; }
+    .spinner-sm { width: 12px; height: 12px; border: 2px solid rgba(200,255,0,.2); border-top-color: var(--accent); border-radius: 50%; animation: spin .6s linear infinite; }
+
+    /* ── Output panel ────────────────────────────────────────── */
+    .out-body {
+      min-height: 360px; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; padding: 24px 20px; gap: 16px;
+    }
+
+    /* Placeholder states */
+    .placeholder { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+    .ph-icon {
+      width: 52px; height: 52px; border-radius: 50%;
+      background: var(--surface2); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center; color: var(--muted);
+    }
+    .placeholder p     { font-size: 14px; color: var(--muted); }
+    .placeholder small { font-size: 12px; color: #3a3a46; }
+
+    /* ── Single audio card ───────────────────────────────────── */
+    .audio-card {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 18px; display: flex; flex-direction: column; gap: 14px;
+    }
+    .audio-meta { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--muted); }
+    .audio-meta strong { color: var(--text); font-weight: 600; }
+    .player { display: flex; align-items: center; gap: 12px; }
+    .play-btn {
+      width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: #000; border: none;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+      transition: background var(--ease), transform .1s;
+    }
+    .play-btn:hover  { background: #d4ff1a; }
+    .play-btn:active { transform: scale(.94); }
+    .progress-col { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+    .track { width: 100%; height: 4px; background: var(--border); border-radius: 2px; cursor: pointer; position: relative; }
+    .fill { height: 100%; background: var(--accent); border-radius: 2px; width: 0%; transition: width .08s linear; position: relative; }
+    .fill::after { content: ''; position: absolute; right: -5px; top: 50%; transform: translateY(-50%); width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+    .times { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .audio-actions { display: flex; gap: 8px; justify-content: flex-end; }
+    .loop-on { color: var(--accent) !important; border-color: rgba(200,255,0,.3) !important; }
+    .transcript { width: 100%; }
+    .transcript-label { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 7px; }
+    .transcript-text {
+      font-size: 13px; color: #888; line-height: 1.65; max-height: 64px; overflow: hidden;
+      -webkit-mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+      mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+    }
+
+    /* ── Multi-chunk output ──────────────────────────────────── */
+    .multi-wrap { width: 100%; display: flex; flex-direction: column; gap: 12px; }
+
+    .multi-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px;
+      background: rgba(200,255,0,.06); border: 1px solid rgba(200,255,0,.15);
+      border-radius: 9px; font-size: 12px;
+    }
+    .multi-header strong { color: var(--accent); }
+
+    /* Progress bar for chunk generation */
+    .gen-progress {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px;
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 9px;
+      font-size: 12px; color: var(--muted);
+    }
+
+    .chunk-track-outer {
+      flex: 1; height: 4px; background: var(--border); border-radius: 2px;
+    }
+    .chunk-track-fill {
+      height: 100%; background: var(--accent); border-radius: 2px;
+      transition: width .4s ease;
+    }
+
+    /* Individual chunk card */
+    .chunk-card {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 10px;
+      animation: fadeUp .3s ease;
+    }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+    .chunk-header {
+      display: flex; align-items: center; gap: 10px; font-size: 12px;
+    }
+    .chunk-num {
+      font-weight: 600; font-size: 11px;
+      background: rgba(200,255,0,.1); color: var(--accent);
+      border: 1px solid rgba(200,255,0,.15);
+      border-radius: 20px; padding: 2px 9px;
+    }
+    .chunk-chars { color: var(--muted); font-size: 11px; }
+    .chunk-dur   { color: var(--muted); font-size: 11px; margin-left: auto; font-variant-numeric: tabular-nums; }
+
+    .chunk-player { display: flex; align-items: center; gap: 10px; }
+
+    .chunk-play {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--accent); color: #000; border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+      transition: background var(--ease), transform .1s;
+    }
+    .chunk-play:hover  { background: #d4ff1a; }
+    .chunk-play:active { transform: scale(.94); }
+
+    .chunk-progress-col { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+    .chunk-track { width: 100%; height: 3px; background: var(--border); border-radius: 2px; cursor: pointer; position: relative; }
+    .chunk-fill  { height: 100%; background: var(--accent); border-radius: 2px; width: 0%; transition: width .08s linear; }
+    .chunk-times { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+    .chunk-dl {
+      background: none; border: none; color: var(--muted); cursor: pointer;
+      padding: 5px; border-radius: 6px; display: flex; align-items: center;
+      transition: color var(--ease), background var(--ease);
+    }
+    .chunk-dl:hover { color: var(--text); background: var(--border); }
+
+    /* Pending chunk (still generating) */
+    .chunk-card.pending {
+      opacity: .5; pointer-events: none;
+      border-style: dashed;
+    }
+
+    /* ── Merge section ───────────────────────────────────────── */
+    .merge-section {
+      width: 100%; display: flex; flex-direction: column; gap: 10px;
+      padding: 14px 16px;
+      background: rgba(167,139,250,.06); border: 1px solid rgba(167,139,250,.2);
+      border-radius: 10px; animation: fadeUp .3s ease;
+    }
+    .merge-title { font-size: 12px; font-weight: 600; color: var(--purple); display: flex; align-items: center; gap: 7px; }
+    .merge-desc  { font-size: 12px; color: var(--muted); }
+
+    /* ── Waveform ────────────────────────────────────────────── */
+    @keyframes w1 { 0%,100%{height:4px}  50%{height:18px} }
+    @keyframes w2 { 0%,100%{height:12px} 50%{height:4px}  }
+    @keyframes w3 { 0%,100%{height:8px}  50%{height:22px} }
+    @keyframes w4 { 0%,100%{height:18px} 50%{height:6px}  }
+    @keyframes w5 { 0%,100%{height:6px}  50%{height:14px} }
+    .waveform { display: flex; align-items: center; gap: 3px; height: 26px; }
+    .waveform .b { width: 3px; border-radius: 2px; background: var(--accent); }
+    .waveform.active .b:nth-child(1) { animation: w1 .85s ease-in-out infinite; }
+    .waveform.active .b:nth-child(2) { animation: w2 .70s ease-in-out infinite; }
+    .waveform.active .b:nth-child(3) { animation: w3 1.05s ease-in-out infinite; }
+    .waveform.active .b:nth-child(4) { animation: w4 .80s ease-in-out infinite; }
+    .waveform.active .b:nth-child(5) { animation: w5 .95s ease-in-out infinite; }
+
+    /* ── History ─────────────────────────────────────────────── */
+    .history-wrap { max-width: 1200px; width: 100%; margin: 0 auto; padding: 0 28px 28px; }
+    .hist-head {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .7px;
+      color: var(--muted); margin-bottom: 10px;
+    }
+    .hist-list { display: flex; flex-direction: column; gap: 7px; }
+    .hist-item {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 9px;
+      padding: 11px 16px; display: flex; align-items: center; gap: 12px;
+      transition: border-color var(--ease);
+    }
+    .hist-item:hover { border-color: #38383f; }
+    .hist-play {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: var(--surface2); border: 1px solid var(--border); color: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; flex-shrink: 0; transition: background var(--ease);
+    }
+    .hist-play:hover { background: var(--border); }
+    .hist-info { flex: 1; overflow: hidden; }
+    .hist-text { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
+    .hist-meta { font-size: 11px; color: var(--muted); }
+    .hist-tag {
+      font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 10px;
+      background: rgba(200,255,0,.1); color: var(--accent);
+      border: 1px solid rgba(200,255,0,.15); flex-shrink: 0;
+    }
+    .hist-tag.clone  { background: rgba(147,112,219,.12); color: var(--purple); border-color: rgba(147,112,219,.2); }
+    .hist-tag.multi  { background: rgba(59,130,246,.12); color: #60a5fa; border-color: rgba(59,130,246,.2); }
+    .hist-dl {
+      background: none; border: none; color: var(--muted); cursor: pointer;
+      padding: 6px; border-radius: 6px; display: flex; align-items: center;
+      transition: color var(--ease), background var(--ease);
+    }
+    .hist-dl:hover { color: var(--text); background: var(--border); }
+
+    /* ── Toast ───────────────────────────────────────────────── */
+    #toasts { position: fixed; bottom: 22px; right: 22px; display: flex; flex-direction: column; gap: 8px; z-index: 9999; }
+    .toast {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 9px;
+      padding: 11px 15px; font-size: 13px; display: flex; align-items: center; gap: 10px;
+      box-shadow: 0 8px 28px rgba(0,0,0,.4); max-width: 360px; animation: tIn .22s ease;
+    }
+    @keyframes tIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
+    .toast.success { border-color: rgba(200,255,0,.25); }
+    .toast.error   { border-color: rgba(255,77,79,.25); }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────────── -->
+<header>
+  <div class="logo">
+    <div class="logo-mark">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"/>
+        <path d="M19 10a1 1 0 0 0-2 0 5 5 0 0 1-10 0 1 1 0 0 0-2 0 7 7 0 0 0 6 6.92V20H8a1 1 0 0 0 0 2h8a1 1 0 0 0 0-2h-3v-3.08A7 7 0 0 0 19 10Z"/>
+      </svg>
+    </div>
+    HeyGen Voice Studio
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <span class="badge">heygen-voice-1-turbo · free</span>
+    <div class="status-pill">
+      <div class="dot" id="statusDot"></div>
+      <span id="statusText">Checking…</span>
+    </div>
+  </div>
+</header>
+
+<!-- ── Main ────────────────────────────────────────────────────────── -->
+<main>
+
+  <!-- LEFT: Input -->
+  <div class="panel">
+    <div class="panel-head">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+      </svg>
+      Input
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" id="tabPreset" onclick="switchMode('preset')">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="11,5 6,9 2,9 2,15 6,15 11,19 11,5"/>
+          <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+        </svg>
+        Preset Voice
+      </button>
+      <button class="tab" id="tabClone" onclick="switchMode('clone')">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"/>
+          <path d="M19 10a1 1 0 0 0-2 0 5 5 0 0 1-10 0 1 1 0 0 0-2 0 7 7 0 0 0 6 6.92V20H8v-3.08A7 7 0 0 0 19 10Z"/>
+        </svg>
+        Voice Clone
+      </button>
+    </div>
+
+    <!-- Char info row -->
+    <div class="char-row">
+      <span id="charCount">0 characters</span>
+      <span id="chunksHint" class="chunks-hint" style="display:none;"></span>
+    </div>
+
+    <!-- Prompt -->
+    <textarea id="prompt"
+      placeholder="Type or paste your text here…&#10;&#10;Supports 11 languages — English, Spanish, French, German, Japanese, Chinese, Portuguese, Italian, Dutch, Korean, Hindi.&#10;&#10;Long scripts are automatically split into segments and processed sequentially."></textarea>
+
+    <!-- Preset controls -->
+    <div id="presetSection" class="controls-row">
+      <div class="ctrl">
+        <label>Voice</label>
+        <div class="sel-wrap">
+          <select id="voice">
+            <option value="nadine">Nadine</option>
+            <option value="tabitha">Tabitha</option>
+            <option value="bram">Bram</option>
+            <option value="gareth">Gareth</option>
+            <option value="noelle">Noelle</option>
+            <option value="meredith">Meredith</option>
+            <option value="sabrina">Sabrina</option>
+            <option value="lucian">Lucian</option>
+            <option value="weston">Weston</option>
+            <option value="vincent">Vincent</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Clone controls -->
+    <div id="cloneSection" class="clone-section" style="display:none;">
+      <div>
+        <div class="clone-label" style="margin-bottom:8px;">Reference audio clip</div>
+        <div class="drop-zone" id="dropZone">
+          <input type="file" id="cloneFile" accept="audio/*" />
+          <div class="dz-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </div>
+          <p>Drop an audio file or click to browse</p>
+          <small>MP3, WAV, M4A, OGG — any audio format</small>
+        </div>
+        <div class="file-chip" id="fileChip" style="display:none;">
+          <div class="fc-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="11,5 6,9 2,9 2,15 6,15 11,19 11,5"/>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            </svg>
+          </div>
+          <div class="fc-info">
+            <div class="fc-name" id="fileName">—</div>
+            <div class="fc-size" id="fileSize">—</div>
+          </div>
+          <button class="fc-rm" id="removeFile" title="Remove">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div>
+        <div class="clone-label" style="margin-bottom:6px;">
+          Transcript <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#44444f;">(optional)</span>
+        </div>
+        <textarea id="cloneTranscript" rows="3" class="clone-transcript"
+          placeholder="Type what is spoken in the reference clip…"></textarea>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions">
+      <button class="btn btn-primary" id="genBtn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+        Generate
+      </button>
+      <button class="btn btn-ghost" id="resetBtn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="1,4 1,10 7,10"/><path d="M3.51 15a9 9 0 1 0 .49-3.91"/>
+        </svg>
+        Reset
+      </button>
+      <span class="hint">Enter · Shift+Enter new line</span>
+    </div>
+  </div>
+
+  <!-- RIGHT: Output -->
+  <div class="panel">
+    <div class="panel-head">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <polygon points="11,5 6,9 2,9 2,15 6,15 11,19 11,5"/>
+        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+      </svg>
+      Output
+    </div>
+
+    <div class="out-body" id="outBody">
+
+      <!-- Empty -->
+      <div class="placeholder" id="phEmpty">
+        <div class="ph-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <polygon points="11,5 6,9 2,9 2,15 6,15 11,19 11,5"/>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+          </svg>
+        </div>
+        <p>Your audio will appear here</p>
+        <small>Short text → single player · Long text → auto-split segments</small>
+      </div>
+
+      <!-- Generating (single) -->
+      <div class="placeholder" id="phGen" style="display:none;">
+        <div class="ph-icon" style="border-color:rgba(200,255,0,.2);">
+          <div class="waveform active">
+            <div class="b" style="height:8px;"></div>
+            <div class="b" style="height:14px;"></div>
+            <div class="b" style="height:22px;"></div>
+            <div class="b" style="height:12px;"></div>
+            <div class="b" style="height:6px;"></div>
+          </div>
+        </div>
+        <p id="phGenNote">Generating…</p>
+        <small id="phGenSub"></small>
+      </div>
+
+      <!-- ── Single audio card ── -->
+      <div class="audio-card" id="audioCard" style="display:none;">
+        <div class="audio-meta">
+          <div><strong id="outLabel">—</strong><span id="outMeta" style="color:var(--muted);">—</span></div>
+          <span id="outDur">—</span>
+        </div>
+        <div class="player">
+          <button class="play-btn" id="playBtn">
+            <svg id="playIco" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+          </button>
+          <div class="progress-col">
+            <div class="track" id="track"><div class="fill" id="fill"></div></div>
+            <div class="times"><span id="tCur">0:00</span><span id="tTot">—</span></div>
+          </div>
+        </div>
+        <div class="audio-actions">
+          <button class="btn btn-ghost btn-sq" id="loopBtn" title="Loop">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="17,1 21,5 17,9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+              <polyline points="7,23 3,19 7,15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+            </svg>
+          </button>
+          <button class="btn btn-ghost btn-sq" id="dlBtn" title="Download">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+          </button>
+        </div>
+        <div class="transcript" id="transcriptEl">
+          <div class="transcript-label">Transcript</div>
+          <div class="transcript-text" id="transcriptTxt"></div>
+        </div>
+      </div>
+
+      <!-- ── Multi-chunk output area ── -->
+      <div class="multi-wrap" id="multiWrap" style="display:none;"></div>
+
+    </div>
+  </div>
+</main>
+
+<!-- ── History ─────────────────────────────────────────────────── -->
+<div class="history-wrap" id="histWrap" style="display:none;">
+  <div class="hist-head">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/>
+    </svg>
+    Recent Generations
+    <button class="btn btn-ghost" id="clearBtn" style="padding:2px 10px;font-size:11px;margin-left:auto;">Clear</button>
+  </div>
+  <div class="hist-list" id="histList"></div>
+</div>
+
+<div id="toasts"></div>
+<audio id="audioEl" style="display:none;"></audio>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// CONSTANTS & CONFIG
+// ═══════════════════════════════════════════════════════════════════
+const CHUNK_SIZE = 4800;   // max chars per API call (API limit is 5000)
+
+// ═══════════════════════════════════════════════════════════════════
+// PCM16 LE → WAV header wrapper
+// HeyGen outputs at 44 100 Hz, Mono, 16-bit (confirmed: OpenRouter
+// playground shows "PCM16 · 44.1 kHz · Mono")
+// ═══════════════════════════════════════════════════════════════════
+function pcmToWav(pcmBytes, sampleRate = 44100, channels = 1, bitDepth = 16) {
+  const dataLen = pcmBytes.byteLength;
+  const buf = new ArrayBuffer(44 + dataLen);
+  const v   = new DataView(buf);
+  const str = (off, s) => { for (let i = 0; i < s.length; i++) v.setUint8(off + i, s.charCodeAt(i)); };
+  str(0, 'RIFF');  v.setUint32(4,  36 + dataLen, true);
+  str(8, 'WAVE');  str(12, 'fmt ');
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true);
+  v.setUint16(22, channels, true); v.setUint32(24, sampleRate, true);
+  v.setUint32(28, sampleRate * channels * (bitDepth / 8), true);
+  v.setUint16(32, channels * (bitDepth / 8), true); v.setUint16(34, bitDepth, true);
+  str(36, 'data'); v.setUint32(40, dataLen, true);
+  new Uint8Array(buf, 44).set(new Uint8Array(pcmBytes));
+  return buf;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// AudioBuffer → WAV  (for merge output)
+// ═══════════════════════════════════════════════════════════════════
+function audioBufferToWav(buffer) {
+  const numCh   = buffer.numberOfChannels;
+  const sr      = buffer.sampleRate;
+  const samples = buffer.length * numCh;
+  const dataLen = samples * 2;
+  const wav     = new ArrayBuffer(44 + dataLen);
+  const v       = new DataView(wav);
+  const str = (off, s) => { for (let i = 0; i < s.length; i++) v.setUint8(off + i, s.charCodeAt(i)); };
+  str(0, 'RIFF'); v.setUint32(4, 36 + dataLen, true);
+  str(8, 'WAVE'); str(12, 'fmt ');
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true);
+  v.setUint16(22, numCh, true); v.setUint32(24, sr, true);
+  v.setUint32(28, sr * numCh * 2, true);
+  v.setUint16(32, numCh * 2, true); v.setUint16(34, 16, true);
+  str(36, 'data'); v.setUint32(40, dataLen, true);
+  let off = 44;
+  for (let i = 0; i < buffer.length; i++) {
+    for (let ch = 0; ch < numCh; ch++) {
+      const s = Math.max(-1, Math.min(1, buffer.getChannelData(ch)[i]));
+      v.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+      off += 2;
+    }
+  }
+  return wav;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SMART TEXT CHUNKER
+// Splits at: paragraph → sentence → word → hard boundary
+// ═══════════════════════════════════════════════════════════════════
+function splitIntoChunks(text, maxLen = CHUNK_SIZE) {
+  text = text.trim();
+  if (text.length <= maxLen) return [text];
+
+  const chunks = [];
+  let remaining = text;
+
+  while (remaining.length > maxLen) {
+    const seg = remaining.slice(0, maxLen);
+    let splitAt = -1;
+
+    // 1. Paragraph boundary (double newline)
+    const paraIdx = seg.lastIndexOf('\n\n');
+    if (paraIdx > maxLen * 0.4) { splitAt = paraIdx + 2; }
+
+    // 2. Single newline
+    if (splitAt === -1) {
+      const nlIdx = seg.lastIndexOf('\n');
+      if (nlIdx > maxLen * 0.4) { splitAt = nlIdx + 1; }
+    }
+
+    // 3. Sentence boundary (. ! ? followed by space)
+    if (splitAt === -1) {
+      for (let i = seg.length - 1; i >= maxLen * 0.4; i--) {
+        const c = seg[i];
+        if ((c === '.' || c === '!' || c === '?') &&
+            (i + 1 >= seg.length || seg[i + 1] === ' ' || seg[i + 1] === '\n')) {
+          splitAt = i + 1;
+          break;
+        }
+      }
+    }
+
+    // 4. Word boundary (space)
+    if (splitAt === -1) {
+      const spIdx = seg.lastIndexOf(' ');
+      if (spIdx > 0) splitAt = spIdx + 1;
+    }
+
+    // 5. Hard split
+    if (splitAt === -1) splitAt = maxLen;
+
+    chunks.push(remaining.slice(0, splitAt).trim());
+    remaining = remaining.slice(splitAt).trim();
+  }
+
+  if (remaining.length > 0) chunks.push(remaining);
+  return chunks.filter(c => c.length > 0);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════
+let mode         = 'preset';
+let cloneFileB64 = null;
+let currentBlob  = null;   // single-mode blob
+let currentExt   = 'wav';  // always WAV (PCM converted)
+let isLooping    = false;
+const history    = [];
+
+// Multi-chunk state
+let chunkBlobs   = [];     // { blob, ext } per chunk, filled as generated
+let chunkAudios  = [];     // HTMLAudioElement per chunk
+let activeChunkIdx = -1;   // which chunk is currently playing
+
+const $ = id => document.getElementById(id);
+
+// ═══════════════════════════════════════════════════════════════════
+// HEALTH CHECK
+// ═══════════════════════════════════════════════════════════════════
+(async () => {
+  try {
+    const d = await (await fetch('/api/health')).json();
+    $('statusDot').className   = d.ok && d.keyConfigured ? 'dot ok'  : 'dot err';
+    $('statusText').textContent = d.ok && d.keyConfigured ? 'API key configured' : 'Key missing in .env';
+  } catch {
+    $('statusDot').className   = 'dot err';
+    $('statusText').textContent = 'Server unreachable';
+  }
+})();
+
+// ═══════════════════════════════════════════════════════════════════
+// MODE SWITCH
+// ═══════════════════════════════════════════════════════════════════
+function switchMode(m) {
+  mode = m;
+  $('tabPreset').classList.toggle('active', m === 'preset');
+  $('tabClone').classList.toggle('active',  m === 'clone');
+  $('presetSection').style.display = m === 'preset' ? '' : 'none';
+  $('cloneSection').style.display  = m === 'clone'  ? '' : 'none';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// CHAR COUNTER & CHUNK HINT
+// ═══════════════════════════════════════════════════════════════════
+$('prompt').addEventListener('input', updateCharCount);
+
+function updateCharCount() {
+  const n = $('prompt').value.length;
+  $('charCount').textContent = `${n.toLocaleString()} char${n !== 1 ? 's' : ''}`;
+  const hint = $('chunksHint');
+  if (n > CHUNK_SIZE) {
+    const c = splitIntoChunks($('prompt').value).length;
+    hint.textContent = `→ ${c} segment${c !== 1 ? 's' : ''}`;
+    hint.style.display = '';
+  } else {
+    hint.style.display = 'none';
+  }
+}
+
+// ── Keyboard shortcut ─────────────────────────────────────────────
+$('prompt').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!$('genBtn').disabled) generate(); }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// FILE / DROP ZONE
+// ═══════════════════════════════════════════════════════════════════
+const dropZone = $('dropZone'), cloneFileEl = $('cloneFile');
+
+dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) setCloneFile(e.dataTransfer.files[0]);
+});
+cloneFileEl.addEventListener('change', () => { if (cloneFileEl.files[0]) setCloneFile(cloneFileEl.files[0]); });
+$('removeFile').addEventListener('click', clearCloneFile);
+
+function setCloneFile(file) {
+  const r = new FileReader();
+  r.onload = e => {
+    cloneFileB64 = e.target.result.split(',')[1];
+    $('fileName').textContent = file.name;
+    $('fileSize').textContent = fmtBytes(file.size);
+    dropZone.style.display = 'none';
+    $('fileChip').style.display = '';
+  };
+  r.readAsDataURL(file);
+}
+
+function clearCloneFile() {
+  cloneFileB64 = null; cloneFileEl.value = '';
+  dropZone.style.display = ''; $('fileChip').style.display = 'none';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RESET
+// ═══════════════════════════════════════════════════════════════════
+$('resetBtn').addEventListener('click', () => {
+  $('prompt').value = '';
+  $('charCount').textContent = '0 chars';
+  $('chunksHint').style.display = 'none';
+  $('cloneTranscript').value = '';
+  clearCloneFile();
+  currentBlob = null;
+  $('audioEl').src = '';
+  chunkBlobs = []; chunkAudios = []; activeChunkIdx = -1;
+  show('empty');
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// GENERATE — routes to single or chunked
+// ═══════════════════════════════════════════════════════════════════
+$('genBtn').addEventListener('click', generate);
+
+async function generate() {
+  const text = $('prompt').value.trim();
+  if (!text) { toast('Please enter some text', 'error'); $('prompt').focus(); return; }
+  if (mode === 'clone' && !cloneFileB64) { toast('Upload a reference audio clip to clone the voice', 'error'); return; }
+
+  const basePayload = mode === 'preset'
+    ? { voice: $('voice').value }
+    : { cloneAudio: cloneFileB64, cloneTranscript: $('cloneTranscript').value.trim() };
+
+  const chunks = splitIntoChunks(text);
+
+  if (chunks.length === 1) {
+    await generateSingle({ ...basePayload, text: chunks[0] });
+  } else {
+    await generateChunked(chunks, basePayload);
+  }
+}
+
+// ─── Single generation ─────────────────────────────────────────────
+async function generateSingle(payload) {
+  setLoading(true, 'Calling HeyGen Voice API', '');
+
+  try {
+    const { blob, ext, metaStr } = await callTTS(payload);
+
+    currentBlob = blob; currentExt = ext;
+    $('audioEl').src  = URL.createObjectURL(blob);
+    $('audioEl').loop = isLooping;
+
+    await waitForMeta($('audioEl'));
+
+    const dur   = $('audioEl').duration;
+    const label = mode === 'clone' ? 'Cloned Voice' : cap($('voice').value);
+    $('outLabel').textContent = label;
+    $('outMeta').textContent  = metaStr;
+    $('outDur').textContent   = isFinite(dur) ? fmtTime(dur) : '—';
+    $('tTot').textContent     = isFinite(dur) ? fmtTime(dur) : '—';
+    $('tCur').textContent     = '0:00';
+    $('fill').style.width     = '0%';
+    $('transcriptTxt').textContent = payload.text;
+
+    show('single');
+    toast('Audio generated!', 'success');
+    addHistory({ text: payload.text, label, isClone: mode === 'clone', blob, ext, isMulti: false });
+
+  } catch (err) {
+    show('empty');
+    toast(err.message || 'Generation failed', 'error');
+  } finally {
+    setLoading(false);
+  }
+}
+
+// ─── Chunked generation ────────────────────────────────────────────
+async function generateChunked(chunks, basePayload) {
+  const total   = chunks.length;
+  const label   = mode === 'clone' ? 'Cloned Voice' : cap($('voice').value);
+
+  chunkBlobs    = new Array(total).fill(null);
+  chunkAudios   = new Array(total).fill(null);
+  activeChunkIdx = -1;
+
+  // Build the skeleton UI immediately
+  buildMultiUI(chunks, label);
+  show('multi');
+  setLoading(true, `Generating segment 1 of ${total}…`, '');
+  updateChunkProgress(0, total);
+
+  let successCount = 0;
+
+  for (let i = 0; i < total; i++) {
+    updateProgressBar(i, total);
+    setLoading(true, `Generating segment ${i + 1} of ${total}…`, `${chunks[i].length.toLocaleString()} characters`);
+
+    try {
+      const { blob, ext, metaStr } = await callTTS({ ...basePayload, text: chunks[i] });
+      chunkBlobs[i] = { blob, ext };
+
+      // Wire up the chunk's audio element
+      const audio = new Audio(URL.createObjectURL(blob));
+      chunkAudios[i] = audio;
+
+      // Auto-advance to next chunk when this one ends
+      audio.addEventListener('ended', () => {
+        const next = i + 1;
+        if (next < total && chunkAudios[next]) {
+          chunkAudios[next].play();
+          setActiveChunk(next);
+        } else {
+          setActiveChunk(-1);
+        }
+      });
+      audio.addEventListener('timeupdate', () => updateChunkPlayer(i));
+
+      activateChunkCard(i, audio, chunks[i].length, metaStr);
+      successCount++;
+
+    } catch (err) {
+      toast(`Segment ${i + 1} failed: ${err.message}`, 'error');
+      markChunkFailed(i);
+      break; // stop processing further chunks
+    }
+  }
+
+  updateProgressBar(successCount, total);
+  setLoading(false);
+
+  if (successCount === total) {
+    showMergeSection(label);
+    addHistory({ text: chunks.join(' '), label, isClone: mode === 'clone', isMulti: true, chunkBlobs: [...chunkBlobs] });
+    toast(`All ${total} segments ready!`, 'success');
+  } else if (successCount > 0) {
+    toast(`${successCount} of ${total} segments generated`, 'info');
+  }
+}
+
+// ─── Core API call ─────────────────────────────────────────────────
+async function callTTS(payload) {
+  const res = await fetch('/api/tts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+    throw new Error(err.error || `HTTP ${res.status}`);
+  }
+
+  const audioBuf = await res.arrayBuffer();
+  if (!audioBuf.byteLength) throw new Error('Empty audio received from API');
+
+  // Always PCM → WAV (HeyGen only reliably returns PCM)
+  const wav   = pcmToWav(audioBuf, 44100, 1, 16);
+  const blob  = new Blob([wav], { type: 'audio/wav' });
+  const ext     = 'wav';
+  const metaStr = ' · PCM16 · 44.1 kHz · Mono';
+  return { blob, ext, metaStr };
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// MULTI-CHUNK UI BUILDERS
+// ═══════════════════════════════════════════════════════════════════
+function buildMultiUI(chunks, label, fmt) {
+  const wrap = $('multiWrap');
+  wrap.innerHTML = '';
+
+  // Header
+  const header = el('div', 'multi-header');
+  header.innerHTML = `
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2">
+      <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+    </svg>
+    <strong>${chunks.length} segments</strong>
+    <span style="color:var(--muted);">${chunks.reduce((s,c)=>s+c.length,0).toLocaleString()} total characters</span>`;
+  wrap.appendChild(header);
+
+  // Progress row
+  const prog = el('div', 'gen-progress');
+  prog.id = 'genProgressRow';
+  prog.innerHTML = `
+    <div class="spinner-sm"></div>
+    <span id="genProgressText">Starting…</span>
+    <div class="chunk-track-outer" style="flex:1;">
+      <div class="chunk-track-fill" id="chunkTrackFill" style="width:0%;"></div>
+    </div>`;
+  wrap.appendChild(prog);
+
+  // Skeleton cards for each chunk
+  chunks.forEach((chunk, i) => {
+    const card = el('div', 'chunk-card pending');
+    card.id = `chunk-card-${i}`;
+    card.innerHTML = `
+      <div class="chunk-header">
+        <span class="chunk-num">Segment ${i + 1} of ${chunks.length}</span>
+        <span class="chunk-chars">${chunk.length.toLocaleString()} chars</span>
+        <span class="chunk-dur" id="chunk-dur-${i}">—</span>
+      </div>
+      <div class="chunk-player">
+        <button class="chunk-play" id="chunk-play-${i}" disabled>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+        </button>
+        <div class="chunk-progress-col">
+          <div class="chunk-track" id="chunk-track-${i}">
+            <div class="chunk-fill" id="chunk-fill-${i}"></div>
+          </div>
+          <div class="chunk-times">
+            <span id="chunk-cur-${i}">0:00</span>
+            <span id="chunk-tot-${i}">—</span>
+          </div>
+        </div>
+        <button class="chunk-dl" id="chunk-dl-${i}" disabled title="Download segment ${i+1}">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+        </button>
+      </div>`;
+    wrap.appendChild(card);
+  });
+}
+
+function activateChunkCard(i, audio, charLen, metaStr) {
+  const card = $(`chunk-card-${i}`);
+  card.classList.remove('pending');
+
+  // Duration
+  audio.addEventListener('loadedmetadata', () => {
+    const d = audio.duration;
+    $(`chunk-dur-${i}`).textContent = isFinite(d) ? fmtTime(d) : '—';
+    $(`chunk-tot-${i}`).textContent = isFinite(d) ? fmtTime(d) : '—';
+  });
+
+  // Play button
+  const playBtn = $(`chunk-play-${i}`);
+  playBtn.disabled = false;
+  playBtn.onclick = () => {
+    if (audio.paused) {
+      // Pause any other playing chunk
+      chunkAudios.forEach((a, idx) => { if (a && idx !== i) { a.pause(); updateChunkPlayIcon(idx, false); } });
+      audio.play();
+      setActiveChunk(i);
+    } else {
+      audio.pause();
+      setActiveChunk(-1);
+    }
+    updateChunkPlayIcon(i, audio.paused ? false : true);
+  };
+
+  audio.addEventListener('play',  () => updateChunkPlayIcon(i, true));
+  audio.addEventListener('pause', () => updateChunkPlayIcon(i, false));
+  audio.addEventListener('ended', () => updateChunkPlayIcon(i, false));
+
+  // Seek
+  $(`chunk-track-${i}`).addEventListener('click', e => {
+    if (!audio.duration) return;
+    const r = $(`chunk-track-${i}`).getBoundingClientRect();
+    audio.currentTime = ((e.clientX - r.left) / r.width) * audio.duration;
+  });
+
+  // Download
+  const dlBtn = $(`chunk-dl-${i}`);
+  dlBtn.disabled = false;
+  dlBtn.onclick = () => download(chunkBlobs[i].blob, chunkBlobs[i].ext, `segment-${i + 1}`);
+}
+
+function updateChunkPlayIcon(i, playing) {
+  const btn = $(`chunk-play-${i}`);
+  if (!btn) return;
+  btn.innerHTML = playing
+    ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`
+    : `<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>`;
+}
+
+function updateChunkPlayer(i) {
+  const audio = chunkAudios[i];
+  if (!audio || !audio.duration) return;
+  $(`chunk-fill-${i}`).style.width = (audio.currentTime / audio.duration * 100) + '%';
+  $(`chunk-cur-${i}`).textContent  = fmtTime(audio.currentTime);
+}
+
+function setActiveChunk(i) { activeChunkIdx = i; }
+
+function markChunkFailed(i) {
+  const card = $(`chunk-card-${i}`);
+  if (card) card.style.borderColor = 'rgba(255,77,79,.3)';
+}
+
+function updateChunkProgress(done, total) {
+  const txt = $('genProgressText');
+  if (txt) txt.textContent = done < total ? `Generating segment ${done + 1} of ${total}…` : 'All segments done';
+}
+
+function updateProgressBar(done, total) {
+  const fill = $('chunkTrackFill');
+  if (fill) fill.style.width = (done / total * 100) + '%';
+  // Hide progress row when all done
+  if (done === total) {
+    const row = $('genProgressRow');
+    if (row) setTimeout(() => { row.style.display = 'none'; }, 800);
+  }
+}
+
+// ─── Merge section ─────────────────────────────────────────────────
+function showMergeSection(label) {
+  const wrap = $('multiWrap');
+  const sec = el('div', 'merge-section');
+  sec.innerHTML = `
+    <div class="merge-title">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+        <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+      </svg>
+      Merge & Export
+    </div>
+    <div class="merge-desc">
+      Combines all segments into one continuous audio file using the Web Audio API. Exports as WAV.
+    </div>
+    <button class="btn btn-purple" id="mergeBtn">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      Download Merged WAV
+    </button>`;
+  wrap.appendChild(sec);
+
+  $('mergeBtn').addEventListener('click', async () => {
+    const btn = $('mergeBtn');
+    btn.disabled = true;
+    btn.innerHTML = `<div class="spinner-sm" style="border-top-color:var(--purple);border-color:rgba(167,139,250,.2);"></div> Merging…`;
+
+    try {
+      await mergeAndDownload(chunkBlobs, label);
+      toast('Merged WAV downloaded!', 'success');
+    } catch (err) {
+      toast('Merge failed: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download Merged WAV`;
+    }
+  });
+}
+
+// ─── Merge via Web Audio API ───────────────────────────────────────
+async function mergeAndDownload(blobs, label) {
+  const ctx     = new (window.AudioContext || window.webkitAudioContext)();
+  const decoded = await Promise.all(
+    blobs.map(b => b.blob.arrayBuffer().then(ab => ctx.decodeAudioData(ab)))
+  );
+  ctx.close();
+
+  const sr    = decoded[0].sampleRate;
+  const total = decoded.reduce((s, b) => s + b.length, 0);
+  const merged = new OfflineAudioContext(1, total, sr);
+  // Use a simple approach: create buffer and copy data
+  const outBuf = new AudioContext().createBuffer(1, total, sr);
+  const ch = outBuf.getChannelData(0);
+  let off = 0;
+  for (const buf of decoded) {
+    ch.set(buf.getChannelData(0), off);
+    off += buf.length;
+  }
+
+  const wavBuf = audioBufferToWav(outBuf);
+  const blob   = new Blob([wavBuf], { type: 'audio/wav' });
+  download(blob, 'wav', `${label.toLowerCase().replace(/\s+/g,'-')}-merged`);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SINGLE-MODE PLAYER
+// ═══════════════════════════════════════════════════════════════════
+const audioEl = $('audioEl');
+const PLAY_SVG  = `<polygon points="5,3 19,12 5,21"/>`;
+const PAUSE_SVG = `<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>`;
+
+$('playBtn').addEventListener('click', () => audioEl.paused ? audioEl.play() : audioEl.pause());
+audioEl.addEventListener('play',  () => { $('playIco').innerHTML = PAUSE_SVG; });
+audioEl.addEventListener('pause', () => { $('playIco').innerHTML = PLAY_SVG; });
+audioEl.addEventListener('ended', () => {
+  $('playIco').innerHTML = PLAY_SVG;
+  $('fill').style.width  = '0%';
+  $('tCur').textContent  = '0:00';
+});
+audioEl.addEventListener('timeupdate', () => {
+  if (!audioEl.duration) return;
+  $('fill').style.width = (audioEl.currentTime / audioEl.duration * 100) + '%';
+  $('tCur').textContent = fmtTime(audioEl.currentTime);
+});
+$('track').addEventListener('click', e => {
+  if (!audioEl.duration) return;
+  const r = $('track').getBoundingClientRect();
+  audioEl.currentTime = ((e.clientX - r.left) / r.width) * audioEl.duration;
+});
+$('loopBtn').addEventListener('click', () => {
+  isLooping = !isLooping; audioEl.loop = isLooping;
+  $('loopBtn').classList.toggle('loop-on', isLooping);
+  toast(isLooping ? 'Loop on' : 'Loop off');
+});
+$('dlBtn').addEventListener('click', () => download(currentBlob, currentExt, $('outLabel').textContent));
+
+// ═══════════════════════════════════════════════════════════════════
+// HISTORY
+// ═══════════════════════════════════════════════════════════════════
+function addHistory(item) {
+  item.ts = Date.now();
+  history.unshift(item);
+  if (history.length > 10) history.pop();
+  renderHistory();
+}
+
+function renderHistory() {
+  const wrap = $('histWrap'), list = $('histList');
+  if (!history.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  list.innerHTML = '';
+
+  history.forEach(it => {
+    const d = document.createElement('div');
+    d.className = 'hist-item';
+
+    const tagClass = it.isMulti ? 'multi' : it.isClone ? 'clone' : '';
+    const tagText  = it.isMulti ? 'Multi' : it.isClone ? 'Clone' : 'Preset';
+
+    d.innerHTML = `
+      <button class="hist-play" title="Play">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+      </button>
+      <div class="hist-info">
+        <div class="hist-text">${esc(it.text)}</div>
+        <div class="hist-meta">${esc(it.label)} · ${ago(it.ts)}</div>
+      </div>
+      <span class="hist-tag ${tagClass}">${tagText}</span>
+      ${!it.isMulti ? `<button class="hist-dl" title="Download">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+      </button>` : ''}`;
+
+    d.querySelector('.hist-play').onclick = () => {
+      if (it.isMulti) {
+        // Restore the multi-chunk UI from saved blobs
+        restoreMultiFromHistory(it);
+        return;
+      }
+      currentBlob = it.blob; currentExt = it.ext;
+      audioEl.src = URL.createObjectURL(it.blob);
+      audioEl.play();
+      $('outLabel').textContent = it.label;
+      $('outMeta').textContent  = it.ext === 'mp3' ? ' · MP3' : ' · PCM16 · 44.1 kHz';
+      $('transcriptTxt').textContent = it.text;
+      show('single');
+    };
+
+    if (!it.isMulti) {
+      d.querySelector('.hist-dl').onclick = () => download(it.blob, it.ext, it.label);
+    }
+
+    list.appendChild(d);
+  });
+}
+
+// ─── Restore multi-chunk UI from history ──────────────────────────
+function restoreMultiFromHistory(it) {
+  // Reset global chunk state from the saved history item
+  chunkBlobs    = [...it.chunkBlobs];
+  chunkAudios   = new Array(chunkBlobs.length).fill(null);
+  activeChunkIdx = -1;
+
+  // Rebuild skeleton UI (no pending state — all already done)
+  const wrap = $('multiWrap');
+  wrap.innerHTML = '';
+
+  // Header
+  const header = el('div', 'multi-header');
+  header.innerHTML = `
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2">
+      <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+    </svg>
+    <strong>${chunkBlobs.length} segments</strong>
+    <span style="color:var(--muted);">Restored from history</span>`;
+  wrap.appendChild(header);
+
+  // Recreate each chunk card (already active — no pending class)
+  chunkBlobs.forEach((cb, i) => {
+    const card = el('div', 'chunk-card');
+    card.id = `chunk-card-${i}`;
+    card.innerHTML = `
+      <div class="chunk-header">
+        <span class="chunk-num">Segment ${i + 1} of ${chunkBlobs.length}</span>
+        <span class="chunk-chars"></span>
+        <span class="chunk-dur" id="chunk-dur-${i}">—</span>
+      </div>
+      <div class="chunk-player">
+        <button class="chunk-play" id="chunk-play-${i}">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+        </button>
+        <div class="chunk-progress-col">
+          <div class="chunk-track" id="chunk-track-${i}">
+            <div class="chunk-fill" id="chunk-fill-${i}"></div>
+          </div>
+          <div class="chunk-times">
+            <span id="chunk-cur-${i}">0:00</span>
+            <span id="chunk-tot-${i}">—</span>
+          </div>
+        </div>
+        <button class="chunk-dl" id="chunk-dl-${i}" title="Download segment ${i+1}">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+        </button>
+      </div>`;
+    wrap.appendChild(card);
+
+    const audio = new Audio(URL.createObjectURL(cb.blob));
+    chunkAudios[i] = audio;
+
+    audio.addEventListener('loadedmetadata', () => {
+      const d = audio.duration;
+      $(`chunk-dur-${i}`).textContent = isFinite(d) ? fmtTime(d) : '—';
+      $(`chunk-tot-${i}`).textContent = isFinite(d) ? fmtTime(d) : '—';
+    });
+
+    audio.addEventListener('ended', () => {
+      updateChunkPlayIcon(i, false);
+      const next = i + 1;
+      if (next < chunkBlobs.length && chunkAudios[next]) {
+        chunkAudios[next].play();
+        setActiveChunk(next);
+      } else {
+        setActiveChunk(-1);
+      }
+    });
+
+    audio.addEventListener('play',  () => updateChunkPlayIcon(i, true));
+    audio.addEventListener('pause', () => updateChunkPlayIcon(i, false));
+    audio.addEventListener('timeupdate', () => updateChunkPlayer(i));
+
+    $(`chunk-play-${i}`).onclick = () => {
+      if (audio.paused) {
+        chunkAudios.forEach((a, idx) => { if (a && idx !== i) { a.pause(); updateChunkPlayIcon(idx, false); } });
+        audio.play(); setActiveChunk(i);
+      } else {
+        audio.pause(); setActiveChunk(-1);
+      }
+    };
+
+    $(`chunk-track-${i}`).addEventListener('click', e => {
+      if (!audio.duration) return;
+      const r = $(`chunk-track-${i}`).getBoundingClientRect();
+      audio.currentTime = ((e.clientX - r.left) / r.width) * audio.duration;
+    });
+
+    $(`chunk-dl-${i}`).onclick = () => download(cb.blob, cb.ext, `segment-${i + 1}`);
+  });
+
+  // Show merge button again
+  showMergeSection(it.label);
+
+  show('multi');
+  toast(`${chunkBlobs.length} segments restored`, 'success');
+}
+
+$('clearBtn').addEventListener('click', () => { history.length = 0; $('histWrap').style.display = 'none'; });
+
+// ═══════════════════════════════════════════════════════════════════
+// UI HELPERS
+// ═══════════════════════════════════════════════════════════════════
+function show(state) {
+  $('phEmpty').style.display    = state === 'empty'  ? '' : 'none';
+  $('phGen').style.display      = state === 'gen'    ? '' : 'none';
+  $('audioCard').style.display  = state === 'single' ? '' : 'none';
+  $('multiWrap').style.display  = state === 'multi'  ? '' : 'none';
+  // Force out-body to flex-start when multi (content is tall)
+  $('outBody').style.alignItems = state === 'multi' ? 'flex-start' : 'center';
+  $('outBody').style.justifyContent = state === 'multi' ? 'flex-start' : 'center';
+}
+
+function setLoading(on, note = '', sub = '') {
+  $('genBtn').disabled  = on;
+  $('genBtn').innerHTML = on
+    ? `<div class="spinner"></div> Generating…`
+    : `<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg> Generate`;
+  if (on && $('phGen').style.display !== 'none') {
+    $('phGenNote').textContent = note;
+    $('phGenSub').textContent  = sub;
+  }
+}
+
+async function waitForMeta(audio) {
+  return new Promise((ok, fail) => {
+    audio.onloadedmetadata = ok;
+    audio.onerror = () => fail(new Error('Audio decode error — try PCM→WAV format'));
+    setTimeout(ok, 2000);
+  });
+}
+
+function download(blob, ext, label) {
+  if (!blob) return;
+  const a = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = `heygen-${label.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}.${ext}`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+function el(tag, cls) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  return e;
+}
+
+function fmtTime(s) {
+  if (!isFinite(s)) return '0:00';
+  return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+}
+
+function fmtBytes(b) {
+  if (b < 1024)    return b + ' B';
+  if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+  return (b / 1048576).toFixed(1) + ' MB';
+}
+
+function cap(s)  { return s.charAt(0).toUpperCase() + s.slice(1); }
+function esc(s)  { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function ago(ts) {
+  const d = Date.now() - ts;
+  if (d < 60000)   return 'just now';
+  if (d < 3600000) return `${Math.floor(d/60000)}m ago`;
+  return `${Math.floor(d/3600000)}h ago`;
+}
+
+function toast(msg, type = 'info') {
+  const icons = {
+    success: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>`,
+    error:   `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`,
+    info:    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`
+  };
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `${icons[type] || icons.info}<span>${esc(msg)}</span>`;
+  $('toasts').appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+show('empty');
+</script>
+</body>
+</html>
