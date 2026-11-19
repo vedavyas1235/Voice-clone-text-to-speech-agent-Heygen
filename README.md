@@ -6,10 +6,10 @@ A web-based Text-to-Speech (TTS) and Voice Cloning studio powered by HeyGen mode
 
 You can use and test the application directly in your browser without cloning the repo or running anything locally:
 
-👉 **[https://voice-clone-text-to-speech-agent-he.vercel.app/](https://voice-clone-text-to-speech-agent-he.vercel.app/)**
+👉 **[https://voice-clone-text-to-speech-agent-he.vercel.app/](https://voice-clone-text-to-speech-agent-heygen.vedhavyas-ramanujapuram.workers.dev/)**
 
 ### Using Your Own API Key in the Live Demo:
-1. Visit the [live demo website](https://voice-clone-text-to-speech-agent-he.vercel.app/).
+1. Visit the [live demo website](https://voice-clone-text-to-speech-agent-heygen.vedhavyas-ramanujapuram.workers.dev/).
 2. Click the **Settings (⚙️ gear icon)** in the top navigation bar.
 3. Select **Manual** mode.
 4. Paste your [OpenRouter API Key](https://openrouter.ai/keys) (`sk-or-v1-...`) and click **Save**.
