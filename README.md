@@ -2,14 +2,15 @@
 
 A web-based Text-to-Speech (TTS) and Voice Cloning studio powered by HeyGen models via OpenRouter (`heygen/heygen-voice-1-turbo:free`).
 
-## 🌐 Live Demo
+## 🌐 Live Deployments
 
-You can use and test the application directly in your browser without cloning the repo or running anything locally:
+You can test and use the application directly in your browser without cloning the repo or running anything locally:
 
-👉 **[https://voice-clone-text-to-speech-agent-he.vercel.app/](https://voice-clone-text-to-speech-agent-heygen.vedhavyas-ramanujapuram.workers.dev/)**
+- **Cloudflare Pages / Workers**: [https://voice-clone-text-to-speech-agent-heygen.vedhavyas-ramanujapuram.workers.dev/](https://voice-clone-text-to-speech-agent-heygen.vedhavyas-ramanujapuram.workers.dev/)
+- **Vercel**: [https://voice-clone-text-to-speech-agent-he.vercel.app/](https://voice-clone-text-to-speech-agent-he.vercel.app/)
 
-### Using Your Own API Key in the Live Demo:
-1. Visit the [live demo website](https://voice-clone-text-to-speech-agent-heygen.vedhavyas-ramanujapuram.workers.dev/).
+### Using Your Own API Key in the Live Web App:
+1. Visit either live deployment link above.
 2. Click the **Settings (⚙️ gear icon)** in the top navigation bar.
 3. Select **Manual** mode.
 4. Paste your [OpenRouter API Key](https://openrouter.ai/keys) (`sk-or-v1-...`) and click **Save**.
@@ -22,12 +23,13 @@ You can use and test the application directly in your browser without cloning th
 - **Preset Voice Synthesis**: Generate high-quality speech using a variety of built-in voice styles.
 - **Voice Cloning**: Provide or upload custom reference audio to clone and synthesise speech in that specific voice.
 - **Custom API Key Support**: Toggle between server-managed keys or manual client-provided keys per session.
+- **Multi-Platform Support**: Native support for Localhost (Express), Cloudflare Pages (Edge Functions), and Vercel (Serverless Functions).
 - **Modern Dark UI**: Clean, responsive interface with waveform preview, multi-segment audio merge, and audio export.
-- **Lightweight Backend**: Fast Node.js / Express proxy handling audio streaming and API authentication securely.
 
 ## Tech Stack
 
-- **Backend**: Node.js, Express
+- **Local Backend**: Node.js, Express
+- **Edge Backend**: Cloudflare Pages Functions & Vercel Serverless Functions
 - **Frontend**: HTML5, Modern CSS, Vanilla JavaScript
 - **API**: OpenRouter (`heygen/heygen-voice-1-turbo:free`)
 
@@ -81,6 +83,12 @@ You can use and test the application directly in your browser without cloning th
 ## Project Structure
 
 ```
+├── api/                 # Vercel Serverless Functions
+│   ├── health.js        # Health check endpoint
+│   └── tts.js           # Text-to-speech & voice clone endpoint
+├── functions/api/       # Cloudflare Pages Edge Functions
+│   ├── health.js        # Health check endpoint
+│   └── tts.js           # Text-to-speech & voice clone endpoint
 ├── public/              # Client-side web interface
 │   ├── favicon.ico      # Application favicon (ICO format)
 │   ├── favicon.svg      # Cute themed vector favicon (SVG format)
@@ -88,7 +96,7 @@ You can use and test the application directly in your browser without cloning th
 ├── .env.example         # Template for environment variables
 ├── .gitignore           # Ignored files (node_modules, .env, etc.)
 ├── package.json         # Project metadata and dependencies
-├── server.js            # Express server & OpenRouter API integration
+├── server.js            # Express server (for localhost development)
 └── README.md            # Documentation
 ```
 
