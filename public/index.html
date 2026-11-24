@@ -931,15 +931,19 @@ const $ = id => document.getElementById(id);
 // HEALTH CHECK
 // ═══════════════════════════════════════════════════════════════════
 async function checkHealth() {
+  if (sessionApiKey) {
+    $('statusDot').className    = 'dot ok';
+    $('statusText').textContent = 'Manual API key active';
+    return;
+  }
   try {
     const headers = {};
-    if (sessionApiKey) headers['X-Client-Api-Key'] = sessionApiKey;
     const d = await (await fetch('/api/health', { headers })).json();
     $('statusDot').className    = d.ok && d.keyConfigured ? 'dot ok'  : 'dot err';
     $('statusText').textContent = d.ok && d.keyConfigured ? 'API key configured' : 'Key missing — open Settings';
   } catch {
-    $('statusDot').className    = 'dot err';
-    $('statusText').textContent = 'Server unreachable';
+    $('statusDot').className    = 'dot warn';
+    $('statusText').textContent = 'Client mode — open Settings to add API key';
   }
 }
 checkHealth();
@@ -1229,19 +1233,66 @@ async function generateChunked(chunks, basePayload) {
 
 // ─── Core API call ─────────────────────────────────────────────────
 async function callTTS(payload) {
-  const headers = { 'Content-Type': 'application/json' };
-  // Include manual key if user configured one in Settings
-  if (sessionApiKey) headers['X-Client-Api-Key'] = sessionApiKey;
+  let res;
 
-  const res = await fetch('/api/tts', {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(payload)
-  });
+  if (sessionApiKey) {
+    // Direct browser call to OpenRouter API (OpenRouter natively supports CORS with Access-Control-Allow-Origin: *)
+    let body;
+    const responseFormat = 'pcm';
+    if (payload.cloneAudio) {
+      body = {
+        model: 'heygen/heygen-voice-1-turbo:free',
+        input: payload.text.trim(),
+        response_format: responseFormat,
+        input_references: [{
+          type: 'input_audio',
+          input_audio: { data: payload.cloneAudio }
+        }]
+      };
+    } else {
+      body = {
+        model: 'heygen/heygen-voice-1-turbo:free',
+        input: payload.text.trim(),
+        voice: payload.voice.trim(),
+        response_format: responseFormat
+      };
+    }
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-    throw new Error(err.error || `HTTP ${res.status}`);
+    res = await fetch('https://openrouter.ai/api/v1/audio/speech', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${sessionApiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': window.location.origin,
+        'X-Title': 'HeyGen Voice Studio'
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!res.ok) {
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error?.message || err?.message || `API error ${res.status}`);
+      }
+      throw new Error(`API error ${res.status}`);
+    }
+  } else {
+    // Automatic mode: proxy via server /api/tts
+    const headers = { 'Content-Type': 'application/json' };
+    res = await fetch('/api/tts', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+      if (res.status === 404) {
+        throw new Error('Server endpoint (/api/tts) not found. Click ⚙️ Settings and enter your OpenRouter API key under Manual mode.');
+      }
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
   }
 
   const audioBuf = await res.arrayBuffer();
